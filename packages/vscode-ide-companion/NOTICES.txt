@@ -1,6 +1,18 @@
 This file contains third-party software notices and license terms.
 
 ============================================================
+@google/gemini-cli-core@undefined
+(git+https://github.com/google-gemini/gemini-cli.git)
+
+License text not found.
+
+============================================================
+@google/gemini-cli-sdk@undefined
+(git+https://github.com/google-gemini/gemini-cli.git)
+
+License text not found.
+
+============================================================
 @modelcontextprotocol/sdk@1.26.0
 (git+https://github.com/modelcontextprotocol/typescript-sdk.git)
 

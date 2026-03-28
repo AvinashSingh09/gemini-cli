@@ -28,9 +28,30 @@
     "ide companion"
   ],
   "activationEvents": [
-    "onStartupFinished"
+    "onStartupFinished",
+    "onView:geminiCli.chat"
   ],
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "geminiCliSidebar",
+          "title": "Gemini CLI",
+          "icon": "assets/icon.png"
+        }
+      ]
+    },
+    "views": {
+      "geminiCliSidebar": [
+        {
+          "id": "geminiCli.chat",
+          "name": "Gemini CLI",
+          "type": "webview",
+          "icon": "assets/icon.png",
+          "contextualTitle": "Gemini CLI"
+        }
+      ]
+    },
     "configuration": {
       "title": "Gemini CLI",
       "properties": {
@@ -59,7 +80,7 @@
       },
       {
         "command": "gemini-cli.runGeminiCLI",
-        "title": "Gemini CLI: Run"
+        "title": "Gemini CLI: Open Sidebar"
       },
       {
         "command": "gemini-cli.showNotices",
@@ -137,6 +158,8 @@
     "vitest": "^3.2.4"
   },
   "dependencies": {
+    "@google/gemini-cli-core": "file:../core",
+    "@google/gemini-cli-sdk": "file:../sdk",
     "@modelcontextprotocol/sdk": "^1.23.0",
     "cors": "^2.8.5",
     "express": "^5.1.0",

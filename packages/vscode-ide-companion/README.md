@@ -17,16 +17,17 @@ compatible with both VS Code and VS Code forks.
 - Native Diffing: Seamlessly view, modify, and accept code changes suggested by
   Gemini CLI directly within the editor.
 
-- Launch Gemini CLI: Quickly start a new Gemini CLI session from the Command
-  Palette (Cmd+Shift+P or Ctrl+Shift+P) by running the "Gemini CLI: Run"
-  command.
+- Open Gemini CLI in the sidebar: Use the Command Palette (Cmd+Shift+P or
+  Ctrl+Shift+P) and launch Gemini CLI without leaving the editor. The experience
+  lives in a dedicated Activity Bar view, similar to other IDE-native assistant
+  surfaces.
 
 # Requirements
 
 To use this extension, you'll need:
 
 - VS Code version 1.99.0 or newer
-- Gemini CLI (installed separately) running within the integrated terminal
+- Gemini CLI (installed separately) available in your environment
 
 # Terms of Service and Privacy Notice
 

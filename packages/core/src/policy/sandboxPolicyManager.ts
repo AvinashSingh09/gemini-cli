@@ -41,6 +41,32 @@ export type PersistentCommandConfig = z.infer<
 >;
 export type SandboxTomlSchemaType = z.infer<typeof SandboxTomlSchema>;
 
+function createFallbackDefaultConfig(): SandboxTomlSchemaType {
+  return {
+    modes: {
+      plan: {
+        network: false,
+        readonly: true,
+        approvedTools: [],
+        allowOverrides: false,
+      },
+      default: {
+        network: false,
+        readonly: true,
+        approvedTools: [],
+        allowOverrides: true,
+      },
+      accepting_edits: {
+        network: false,
+        readonly: false,
+        approvedTools: ['sed', 'grep', 'awk', 'perl', 'cat', 'echo'],
+        allowOverrides: true,
+      },
+    },
+    commands: {},
+  };
+}
+
 export class SandboxPolicyManager {
   private static _DEFAULT_CONFIG: SandboxTomlSchemaType | null = null;
 
@@ -55,38 +81,12 @@ export class SandboxPolicyManager {
       );
       try {
         const content = fs.readFileSync(defaultPath, 'utf8');
-        if (typeof content !== 'string') {
-          SandboxPolicyManager._DEFAULT_CONFIG = {
-            modes: {
-              plan: {
-                network: false,
-                readonly: true,
-                approvedTools: [],
-                allowOverrides: false,
-              },
-              default: {
-                network: false,
-                readonly: true,
-                approvedTools: [],
-                allowOverrides: true,
-              },
-              accepting_edits: {
-                network: false,
-                readonly: false,
-                approvedTools: ['sed', 'grep', 'awk', 'perl', 'cat', 'echo'],
-                allowOverrides: true,
-              },
-            },
-            commands: {},
-          };
-          return SandboxPolicyManager._DEFAULT_CONFIG;
-        }
         SandboxPolicyManager._DEFAULT_CONFIG = SandboxTomlSchema.parse(
           toml.parse(content),
         );
       } catch (e) {
         debugLogger.error(`Failed to parse default sandbox policy: ${e}`);
-        throw new Error(`Failed to parse default sandbox policy: ${e}`);
+        SandboxPolicyManager._DEFAULT_CONFIG = createFallbackDefaultConfig();
       }
     }
     return SandboxPolicyManager._DEFAULT_CONFIG;

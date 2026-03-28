@@ -28,11 +28,9 @@ vi.mock('vscode', () => ({
       appendLine: vi.fn(),
     })),
     showInformationMessage: vi.fn(),
-    createTerminal: vi.fn(() => ({
-      show: vi.fn(),
-      sendText: vi.fn(),
-    })),
+    registerWebviewViewProvider: vi.fn(() => ({ dispose: vi.fn() })),
     onDidChangeActiveTextEditor: vi.fn(),
+    onDidChangeTextEditorSelection: vi.fn(),
     activeTextEditor: undefined,
     tabGroups: {
       all: [],
@@ -41,9 +39,14 @@ vi.mock('vscode', () => ({
     showTextDocument: vi.fn(),
     showWorkspaceFolderPick: vi.fn(),
   },
+  ViewColumn: {
+    Beside: 2,
+  },
   workspace: {
     workspaceFolders: [],
     onDidCloseTextDocument: vi.fn(),
+    onDidDeleteFiles: vi.fn(),
+    onDidRenameFiles: vi.fn(),
     registerTextDocumentContentProvider: vi.fn(),
     onDidChangeWorkspaceFolders: vi.fn(),
     onDidGrantWorkspaceTrust: vi.fn(),
@@ -132,16 +135,27 @@ describe('activate', () => {
   });
 
   it('should launch the Gemini CLI when the user clicks the button', async () => {
-    const showInformationMessageMock = vi
-      .mocked(vscode.window.showInformationMessage)
-      .mockResolvedValue('Re-launch Gemini CLI' as never);
     vi.mocked(context.globalState.get).mockReturnValue(undefined);
     vi.mocked(vscode.extensions.getExtension).mockReturnValue({
       packageJSON: { version: '1.1.0' },
     } as vscode.Extension<unknown>);
+    const registerCommandMock = vi.mocked(vscode.commands.registerCommand);
+    const handlers = new Map<string, (...args: unknown[]) => unknown>();
+    registerCommandMock.mockImplementation((id, handler) => {
+      handlers.set(id, handler as (...args: unknown[]) => unknown);
+      return { dispose: vi.fn() } as never;
+    });
     await activate(context);
-    expect(showInformationMessageMock).toHaveBeenCalledWith(
-      'Gemini CLI Companion extension successfully installed.',
+
+    const runCommand = handlers.get('gemini-cli.runGeminiCLI');
+    expect(runCommand).toBeDefined();
+    await runCommand?.();
+    expect(vscode.window.registerWebviewViewProvider).toHaveBeenCalledWith(
+      'geminiCli.chat',
+      expect.anything(),
+    );
+    expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+      'workbench.view.extension.geminiCliSidebar',
     );
   });
 

@@ -9,6 +9,11 @@ import { IDEServer } from './ide-server.js';
 import semver from 'semver';
 import { DiffContentProvider, DiffManager } from './diff-manager.js';
 import { createLogger } from './utils/logger.js';
+import { OpenFilesManager } from './open-files-manager.js';
+import {
+  GeminiChatSidebarViewProvider,
+  applyAcceptedDiff,
+} from './gemini-chat-panel.js';
 import {
   detectIdeFromEnv,
   IDE_DEFINITIONS,
@@ -29,6 +34,8 @@ const MANAGED_EXTENSION_SURFACES: ReadonlySet<IdeInfo['name']> = new Set([
 
 let ideServer: IDEServer;
 let logger: vscode.OutputChannel;
+let openFilesManager: OpenFilesManager;
+let sidebarViewProvider: GeminiChatSidebarViewProvider;
 
 let log: (message: string) => void = () => {};
 
@@ -112,6 +119,8 @@ export async function activate(context: vscode.ExtensionContext) {
   log = createLogger(context, logger);
   log('Extension activated');
 
+  openFilesManager = new OpenFilesManager(context);
+
   const isManagedExtensionSurface = MANAGED_EXTENSION_SURFACES.has(
     detectIdeFromEnv().name,
   );
@@ -121,6 +130,13 @@ export async function activate(context: vscode.ExtensionContext) {
 
   const diffContentProvider = new DiffContentProvider();
   const diffManager = new DiffManager(log, diffContentProvider);
+  sidebarViewProvider = new GeminiChatSidebarViewProvider(
+    context,
+    openFilesManager,
+    diffManager,
+    log,
+    process.cwd(),
+  );
 
   context.subscriptions.push(
     vscode.workspace.onDidCloseTextDocument((doc) => {
@@ -133,6 +149,13 @@ export async function activate(context: vscode.ExtensionContext) {
       DIFF_SCHEME,
       diffContentProvider,
     ),
+    vscode.window.registerWebviewViewProvider(
+      'geminiCli.chat',
+      sidebarViewProvider,
+    ),
+    diffManager.onDidChange((notification) => {
+      void applyAcceptedDiff(notification);
+    }),
     (vscode.commands.registerCommand(
       'gemini.diff.accept',
       (uri?: vscode.Uri) => {
@@ -184,15 +207,14 @@ export async function activate(context: vscode.ExtensionContext) {
     })),
     vscode.commands.registerCommand('gemini-cli.runGeminiCLI', async () => {
       const workspaceFolders = vscode.workspace.workspaceFolders;
-      if (!workspaceFolders || workspaceFolders.length === 0) {
-        vscode.window.showInformationMessage(
-          'No folder open. Please open a folder to run Gemini CLI.',
-        );
-        return;
-      }
+      let workspaceRoot = process.cwd();
 
       let selectedFolder: vscode.WorkspaceFolder | undefined;
-      if (workspaceFolders.length === 1) {
+      if (!workspaceFolders || workspaceFolders.length === 0) {
+        vscode.window.showInformationMessage(
+          'No folder open. Gemini CLI will start in the current process directory.',
+        );
+      } else if (workspaceFolders.length === 1) {
         selectedFolder = workspaceFolders[0];
       } else {
         selectedFolder = await vscode.window.showWorkspaceFolderPick({
@@ -201,14 +223,10 @@ export async function activate(context: vscode.ExtensionContext) {
       }
 
       if (selectedFolder) {
-        const geminiCmd = 'gemini';
-        const terminal = vscode.window.createTerminal({
-          name: `Gemini CLI (${selectedFolder.name})`,
-          cwd: selectedFolder.uri.fsPath,
-        });
-        terminal.show();
-        terminal.sendText(geminiCmd);
+        workspaceRoot = selectedFolder.uri.fsPath;
       }
+
+      sidebarViewProvider.show(workspaceRoot);
     }),
     vscode.commands.registerCommand('gemini-cli.showNotices', async () => {
       const noticePath = vscode.Uri.joinPath(
